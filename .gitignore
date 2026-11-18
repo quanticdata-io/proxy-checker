@@ -1,0 +1,8 @@
+/proxy-checker
+/proxy-checker.exe
+/dist/
+*.test
+*.out
+coverage.*
+.idea/
+.vscode/
