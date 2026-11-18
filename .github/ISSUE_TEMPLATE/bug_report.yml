@@ -1,0 +1,43 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command you ran and what you saw. Mask passwords and API keys.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `proxy-checker version`
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Linux, macOS, Windows, Docker, Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: protocol
+    attributes:
+      label: Proxy protocol
+      multiple: true
+      options: [http, https, socks4, socks5]
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: JSON output with `--json --details` helps most. Mask credentials.
+      render: json

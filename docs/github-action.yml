@@ -1,0 +1,56 @@
+# Example: check a proxy pool every 6 hours and keep the report in the repository.
+#
+# Copy this file to .github/workflows/proxy-check.yml in your own repository and
+# add a secret named PROXY_LIST holding one proxy per line (it is written to a
+# temporary file and never printed: passwords are masked in the report).
+# The job fails, and GitHub notifies you, when fewer than 90% of the proxies pass.
+name: Proxy check
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Install proxy-checker
+        run: go install github.com/quanticdata-io/proxy-checker/cmd/proxy-checker@v0.1.0
+      - name: Check the pool
+        env:
+          PROXY_LIST: ${{ secrets.PROXY_LIST }}
+        run: |
+          mkdir -p reports
+          printf '%s\n' "$PROXY_LIST" > "$RUNNER_TEMP/proxies.txt"
+          set +e
+          proxy-checker -f "$RUNNER_TEMP/proxies.txt" -n 3 --expect-country US \
+            --fail-under 90 --csv > reports/proxy-report.csv
+          status=$?
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+        id: check
+      - name: Commit the report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/proxy-report.csv
+          git diff --cached --quiet || git commit -m "proxy report $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push
+      - name: Fail when the pool is below the goal
+        if: steps.check.outputs.status != '0'
+        run: exit 1
+
+      # QuanticData plans: generate fresh strings and check them instead of a static list.
+      # - name: Check a QuanticData plan
+      #   env:
+      #     QUANTICDATA_API_KEY: ${{ secrets.QUANTICDATA_API_KEY }}
+      #   run: proxy-checker quanticdata --order-id ${{ vars.QD_ORDER_ID }} --country us --quantity 10 --fail-under 90 --csv > reports/quanticdata.csv
